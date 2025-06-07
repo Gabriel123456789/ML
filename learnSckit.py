@@ -15,7 +15,7 @@ print(data.isnull().sum()) #search for missing values
 
 ##We see ages missing, cabins(not important) and embarked
 
-#data cleaning
+# Data cleaning
 def preprocess_data(dataframe):
     #remove from the original dataframe not important things
     dataframe.drop(columns=["PassagensID", "Name", "Ticket", "Cabin"], inplace = True)
@@ -39,7 +39,7 @@ def preprocess_data(dataframe):
     
     return dataframe
 
-# need to fill the ages that are missing
+# Need to fill the ages that are missing
 
 def fill_ages(dataframe):
     #will treat this with the mean of age in the class they were in
@@ -85,3 +85,18 @@ def tune_model(x_training, y_training):
     grid_search.fit(x_training,y_training) # Here we are training the grid search with our data
     
     return grid_search.best_estimator_
+
+best_model = tune_model(x_training,y_training)
+
+
+# Evaluate how well the model is predicting
+def evalute_model(model,x_testing,y_testing):
+    prediction = model.predict(x_testing) #Here the model can´t see the answers, only the x data
+    accuracy = accuracy_score(y_testing, prediction) # compares the predicted with the answers
+    matrix = confusion_matrix(y_testing,prediction) # a matrix that compares results x prediction
+    
+    return accuracy,matrix
+
+
+# Give the evaluate function the best model and our testing datas
+accuracy,conf_matrix = evalute_model(best_model,x_testing,y_testing)
