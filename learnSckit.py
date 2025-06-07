@@ -18,7 +18,7 @@ print(data.isnull().sum()) #search for missing values
 # Data cleaning
 def preprocess_data(dataframe):
     #remove from the original dataframe not important things
-    dataframe.drop(columns=["PassagensID", "Name", "Ticket", "Cabin"], inplace = True)
+    dataframe.drop(columns=["PassengerId", "Name", "Ticket", "Cabin"], inplace = True)
     dataframe["Embarked"].fillna("S", inplace = True) #inplace changes in the original data
     dataframe.drop(columns=["Embarked"], inplace = True)
     
@@ -31,6 +31,8 @@ def preprocess_data(dataframe):
     #feature enginnering = create new columns of data
     dataframe["FamilySize"] = dataframe["SibSp"] + dataframe["Parch"] #we have data of siblings and parents on-board
     dataframe["IsAlone"] = np.where(dataframe["FamilySize"]==0,1,0) #1 for alone, 0 otherwise
+    median_fares = dataframe.groupby("Pclass")["Fare"].median()
+    dataframe["Fare"].fillna(dataframe["Pclass"].map(median_fares), inplace = True) #Needed to fill empty fares
     
     #create bins = range of things, ex: ranges of price they paid, age ranges, etc
     
@@ -73,7 +75,7 @@ x_testing = scaler.transform(x_testing)
 def tune_model(x_training, y_training):
     param_grid = {
         "n_neighbors": range(1,21), #the n number/parameter for knn changes
-        "metrics": ["euclidean", "manhattan", "minkowski"], #different forms of calculating distance from neighbors
+        "metric": ["euclidean", "manhattan", "minkowski"], #different forms of calculating distance from neighbors
         "weights": ["uniform", "distance"]
     }
     
@@ -100,3 +102,9 @@ def evalute_model(model,x_testing,y_testing):
 
 # Give the evaluate function the best model and our testing datas
 accuracy,conf_matrix = evalute_model(best_model,x_testing,y_testing)
+
+
+# Running the model and plotting
+print(f'Accuracy: {accuracy*100:.2f}')
+print(f'Confusion Matrix:')
+print(conf_matrix)
