@@ -21,6 +21,7 @@ def preprocess_data(dataframe):
     dataframe.drop(columns=["PassagensID", "Name", "Ticket", "Cabin"], inplace = True)
     dataframe["Embarked"].fillna("S", inplace = True) #inplace changes in the original data
     dataframe.drop(columns=["Embarked"], inplace = True)
+    
 
     #convert gender to numbers
     dataframe["Sex"] = dataframe["Sex"].map({"male":1,"female":0})
@@ -40,4 +41,10 @@ def preprocess_data(dataframe):
 
 def fill_ages(dataframe):
     #will treat this with the mean of age in the class they were in
+    age_fill_map = {} #create a map of class and age median
+    for pclass in dataframe["Pclass"].unique():
+        age_fill_map[pclass] = dataframe[dataframe["Pclass"] == pclass]["Age"].median()
     
+    dataframe["Age"] = dataframe.apply(lambda row:age_fill_map[row["Pclass"]] if pd.isnull(row["Age"]) else row["Age"], axis=1) #
+    #above: the lambda receives each row(axis = 1) and attributes the value in the dictionary(median) if
+    # the place it is is null, otherwise it keeps the row age value
