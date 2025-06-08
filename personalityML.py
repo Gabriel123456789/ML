@@ -42,4 +42,20 @@ print(data.isnull().sum())
 # Presence of stage fright -> reduced social event attendance and reduced post frequency
 # Reduced social attendance -> Increase hours spent alone, reduced number of friends, drained
 # Time spent alone -> reduced going outside freq
-# 
+
+def pre_processing(dataframe):
+    
+
+
+def fillig_blanks(dataframe):
+    # Will firstly take yes/no columns into binary
+    words_columns = ["Stage_fear", "Drained_after_socializing"]
+    
+    for column in words_columns:
+        LE = LabelEncoder
+        non_missing_rows = dataframe[column].notna()
+        dataframe.loc[non_missing_rows,column] = LE.fit_transform(dataframe.loc[non_missing_rows, column])
+
+    # Imputate data = Fill the blank spaces using simple imputer
+    imputer_simple = SimpleImputer(strategy="most_frequent")
+    dataframe[words_columns] = imputer_simple.fit_transform
