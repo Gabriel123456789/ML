@@ -46,13 +46,19 @@ Y = data["Personality"]
 X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size = 0.3, random_state=42)
 
 # Create bins using only the training data
-bins_events = pd.qcut(X_training["Social_event_attendance"],5,labels=False, retbins=True, duplicates='drop')
-bins_friends = pd.qcut(X_training["Friends_circle_size"],5,labels=False, retbins=True, duplicates='drop')
+_, bins_events = pd.qcut(X_training["Social_event_attendance"],5,labels=False, retbins=True, duplicates='drop')
+_, bins_friends = pd.qcut(X_training["Friends_circle_size"],3,labels=False, retbins=True, duplicates='drop')
 
+# While testing there was a problem with bins values, so this was added
+bins_events_unicos = np.unique(bins_events)
+bins_friends_unicos = np.unique(bins_friends)
 
 # Apply the bins in both data
-X_training["Social_event_attendance"] = pd.cut(X_training["Social_event_attendance"], bins=bins_events, labels=False, include_lowest=True)
-X_testing["Social_event_attendance"] = pd.cut(X_testing["Friends_circle_size"], bins=bins_friends, labels=False,include_lowest=True)
+X_training["Social_event_attendance"] = pd.cut(X_training["Social_event_attendance"], bins=bins_events_unicos, labels=False, include_lowest=True)
+X_testing["Social_event_attendance"] = pd.cut(X_testing["Social_event_attendance"], bins=bins_events_unicos, labels=False, include_lowest=True)
+X_training["Friends_circle_size"] = pd.cut(X_training["Friends_circle_size"], bins=bins_friends_unicos, labels=False,include_lowest=True)
+X_testing["Friends_circle_size"] = pd.cut(X_testing["Friends_circle_size"], bins=bins_friends_unicos, labels=False,include_lowest=True)
+
 
 
 #Make yes/no become binary
@@ -105,6 +111,6 @@ def evaluate_model(model,x_testing,y_testing):
 model_accuracy,model_confusion_matrix = evaluate_model(best_model_grid, X_testing_clean, Y_testing)
 
 # Output
-print(f'Accuracy: {model_accuracy*100:.2f}')
+print(f'Accuracy: {model_accuracy*100:.2f}%')
 print(f'Confusion Matrix:')
 print(model_confusion_matrix)
