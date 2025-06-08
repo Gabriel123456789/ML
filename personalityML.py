@@ -49,9 +49,10 @@ X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size = 0.
 bins_events = pd.qcut(X_training["Social_event_attendance"],5,labels=False, retbins=True, duplicates='drop')
 bins_friends = pd.qcut(X_training["Friends_circle_size"],5,labels=False, retbins=True, duplicates='drop')
 
+
 # Apply the bins in both data
-X_training["Social_event_attendance"] = pd.cut(X_training["Social_event_attendance"], bins=bins_events, labels=False)
-X_testing["Social_event_attendance"] = pd.cut(X_testing["Friends_circle_size"], bins=bins_friends, labels=False)
+X_training["Social_event_attendance"] = pd.cut(X_training["Social_event_attendance"], bins=bins_events, labels=False, include_lowest=True)
+X_testing["Social_event_attendance"] = pd.cut(X_testing["Friends_circle_size"], bins=bins_friends, labels=False,include_lowest=True)
 
 
 #Make yes/no become binary
@@ -68,3 +69,42 @@ X_testing = scaler.transform(X_testing)
 
 
 # Now we will use the knn algorithim to fill the columns with yes/no words
+# The knn imputer will analyze all the data from the near neighbors to fill the blanks
+imputer = KNNImputer(n_neighbors=5)
+
+X_training_clean = imputer.fit_transform(X_training)
+X_testing_clean = imputer.transform(X_testing)
+
+## The pipeline is FINISHED
+# Now the data is clean and we can start tuning our model
+
+def model_tuner(x_training, y_training):
+    # Define the parameters to be used
+    param_grid = {
+        "n_neighbors": range(1,21),
+        "metric": ["euclidean", "manhattan", "minkowski"],
+        "weights": ["uniform", "distance"]    
+    }
+    model = KNeighborsClassifier()
+    
+    ## Use the grid search to find the best model
+    grid = GridSearchCV(model,param_grid, cv = 5, n_jobs= -1)
+    grid.fit(x_training,y_training)
+    return grid.best_estimator_
+
+best_model_grid = model_tuner(X_training_clean, Y_training)
+
+# Create a accuracy tester - Evaluate if the model is good
+
+def evaluate_model(model,x_testing,y_testing):
+    prediction = model.predict(x_testing)
+    accuracy = accuracy_score(y_testing, prediction)
+    matrix_confusion = confusion_matrix(y_testing, prediction)
+    return accuracy, matrix_confusion
+
+model_accuracy,model_confusion_matrix = evaluate_model(best_model_grid, X_testing_clean, Y_testing)
+
+# Output
+print(f'Accuracy: {model_accuracy*100:.2f}')
+print(f'Confusion Matrix:')
+print(model_confusion_matrix)
