@@ -1,7 +1,7 @@
-## There is a process in the building of the model. First we have to import the sckit and other
-## The flow of creating the model goes by: loading data, pre processing data, feature engineering, create bins/scales
-## separate training and testing, scale the training valeus, tune the model, do a grid search for the best model
-## and them evaluate the model with training data, accuracy and confusion matrix
+## There is a process in the building of the model. First we have to import the sckit and others
+## The flow of creating the model goes by a pipeline: First we have to import our data and split training and test
+# then we create bins only in the training set, then map words to binary(yes/no). With that, there is no data leakage
+# Now we can scale our columns fill the blank spaces. Now the data is ready to be fed in the model
 
 import numpy as np
 import pandas as pd
@@ -29,33 +29,42 @@ data.info()
 print(data.isnull().sum())
 
 ###### Data Explained
-#    - Time_spent_Alone: Hours spent alone daily (0–11). OK
-#    - Stage_fear: Presence of stage fright (Yes/No). OK
-#    - Social_event_attendance: Frequency of social events (0–10). OK
-#    - Going_outside: Frequency of going outside (0–7). OK
+#    - Time_spent_Alone: Hours spent alone daily (0–11).
+#    - Stage_fear: Presence of stage fright (Yes/No). 
+#    - Social_event_attendance: Frequency of social events (0–10).
+#    - Going_outside: Frequency of going outside (0–7). 
 #    - Drained_after_socializing: Feeling drained after socializing (Yes/No).
-#    - Friends_circle_size: Number of close friends (0–15). OK
-#    - Post_frequency: Social media post frequency (0–10). OK
+#    - Friends_circle_size: Number of close friends (0–15). 
+#    - Post_frequency: Social media post frequency (0–10). 
 #    - Personality: Target variable (Extrovert/Introvert).*
 
-#How to relate them
-# Presence of stage fright -> reduced social event attendance and reduced post frequency
-# Reduced social attendance -> Increase hours spent alone, reduced number of friends, drained
-# Time spent alone -> reduced going outside freq
 
-def pre_processing(dataframe):
-    
+# Separate the data
+X = data.drop(columns="Personality")
+Y = data["Personality"]
+
+X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size = 0.3, random_state=42)
+
+# Create bins using only the training data
+bins_events = pd.qcut(X_training["Social_event_attendance"],5,labels=False, retbins=True, duplicates='drop')
+bins_friends = pd.qcut(X_training["Friends_circle_size"],5,labels=False, retbins=True, duplicates='drop')
+
+# Apply the bins in both data
+X_training["Social_event_attendance"] = pd.cut(X_training["Social_event_attendance"], bins=bins_events, labels=False)
+X_testing["Social_event_attendance"] = pd.cut(X_testing["Friends_circle_size"], bins=bins_friends, labels=False)
 
 
-def fillig_blanks(dataframe):
-    # Will firstly take yes/no columns into binary
-    words_columns = ["Stage_fear", "Drained_after_socializing"]
-    
-    for column in words_columns:
-        LE = LabelEncoder
-        non_missing_rows = dataframe[column].notna()
-        dataframe.loc[non_missing_rows,column] = LE.fit_transform(dataframe.loc[non_missing_rows, column])
+#Make yes/no become binary
+X_training["Drained_after_socializing"] = X_training["Drained_after_socializing"].map({"Yes":1,"No":0})
+X_testing["Drained_after_socializing"] = X_testing["Drained_after_socializing"].map({"Yes":1,"No":0})
+X_training["Stage_fear"] = X_training["Stage_fear"].map({"Yes":1,"No":0})
+X_testing["Stage_fear"] = X_testing["Stage_fear"].map({"Yes":1,"No":0})
 
-    # Imputate data = Fill the blank spaces using simple imputer
-    imputer_simple = SimpleImputer(strategy="most_frequent")
-    dataframe[words_columns] = imputer_simple.fit_transform
+
+# Scale the data before filling the blanks
+scaler = MinMaxScaler()
+X_training = scaler.fit_transform(X_training)
+X_testing = scaler.transform(X_testing)
+
+
+# Now we will use the knn algorithim to fill the columns with yes/no words
