@@ -46,15 +46,20 @@ numerical_cols = [
 words_cols = ["Gender", "Country_Region", "Cancer_Type", "Cancer_Stage"]
 
 #Plot numerical heatmap
-plt.figure()
-sbs.heatmap(data[numerical_cols].corr(), annot=True)
-plt.tight_layout()
-plt.show()
+num_heatmap = sbs.heatmap(data[numerical_cols].corr(), annot=True)
 
 ## The heatmap shows a strong relation between severity and alcohol use, smoking and air poluttion.
 # Otherwise, it showed a opposite relation between severity and treatment cost
 
 # Analyse words and numerical data combined
 plt.figure()
-sbs.boxplot(data=data, x = "Cancer_Type", y = "Alcohol_Use")
+sbs.violinplot(data=data,x= "Cancer_Type", y="Treatment_Cost_USD")
 plt.show()
+
+estatisticas_por_tipo = data.groupby('Cancer_Type')['Treatment_Cost_USD'].describe() 
+print(estatisticas_por_tipo)
+
+## FINAL EDA CONCLUSION
+## After analyzing the violin plot and the statistics the conclusion was that this dataset is probably fake
+## And the numbers used were generated without being coherent with real life data.
+## This shows the importance of EDA and now this data won´t be used for a model
