@@ -113,3 +113,77 @@ def base_model_training(data,preprocessor):
     report = classification_report(Y_testing,predictions)
     print(f"Accuracy {accuracy*100:.2f}%")
     print(report)
+
+
+###Baseline Results
+# Accuracy 87.23%
+#               precision    recall  f1-score   support
+
+#            0       0.80      0.91      0.85       147
+#            1       0.94      0.85      0.89       221
+
+#     accuracy                           0.87       368
+#     macro avg       0.87      0.88      0.87       368
+#     weighted avg       0.88      0.87      0.87       368
+
+def gridtuning_model(data,preprocessor):
+    X = data.drop(columns="HeartDisease")
+    Y = data["HeartDisease"]
+    X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size=0.4, random_state=42)
+    
+    # Now the processor is ready we will apply it in our data, building the pipeline
+    # The model will be defined as random forest
+    model = RandomForestClassifier(random_state=42)
+    
+    # What happens is that we decide how the data in the pipeline will be processed and wich model is going
+    # to predict our data. The gridsearch will be used to tune how the random forest model will work
+    final_pipeline = Pipeline(steps=[('preprocessing', preprocessor), ('classifier', model)])
+    
+    # Define the parameters for the gridsearch
+    param_grid = {
+        # Indicates the number of trees
+        'classifier__n_estimators' : [100,150],
+        
+        # Indicates the size of each tree
+        'classifier__max_depth' :[10,30]
+    }
+    
+    # Define how the tunning will work
+    grid_model_tuning = GridSearchCV(final_pipeline,param_grid,cv=5,n_jobs=-1)
+    
+    # We give the model the raw data because the pipeline will clean it
+    grid_model_tuning.fit(X_training,Y_training)
+    
+    # After the gridsearch test we will have the best parameters
+    best_model = grid_model_tuning.best_estimator_
+    
+    # Now we can test our best model and check if its accurate
+    prediction = best_model.predict(X_testing)
+    accuracy = accuracy_score(Y_testing,prediction)
+    conf_matrix = confusion_matrix(Y_testing,prediction)
+    report = classification_report(Y_testing,prediction)
+    print(f"Accuracy {accuracy*100:.2f}%")
+    print(report)
+    print(conf_matrix)
+
+## Grid search tunning results with random forest and
+
+# param_grid = {
+#         # Indicates the number of trees
+#         'classifier__n_estimators' : [100,150],
+        
+#         # Indicates the size of each tree
+#         'classifier__max_depth' :[10,30]
+#     }
+# Accuracy 86.96%
+#               precision    recall  f1-score   support
+
+#            0       0.80      0.90      0.85       147
+#            1       0.93      0.85      0.89       221
+
+#     accuracy                           0.87       368
+#     macro avg       0.86      0.87      0.87       368
+#     weighted avg       0.88      0.87      0.87       368
+
+# [[132  15]
+#  [ 33 188]]
