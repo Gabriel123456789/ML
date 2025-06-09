@@ -114,7 +114,7 @@ def base_model_training_random_forest(data,preprocessor):
     conf_matrix = confusion_matrix(Y_testing, predictions)
     print(f"Accuracy {accuracy*100:.2f}%")
     print(report)
-    print(conf_matrix)
+    print("Confusion Matrix:\n",conf_matrix)
 
 
 ###Baseline Results
@@ -166,7 +166,7 @@ def gridtuning_model_random_forest(data,preprocessor):
     report = classification_report(Y_testing,prediction)
     print(f"Accuracy {accuracy*100:.2f}%")
     print(report)
-    print(conf_matrix)
+    print("Confusion Matrix:\n",conf_matrix)
 
 ## Grid search tunning results with random forest and
 
@@ -221,11 +221,118 @@ def various_models_baseline(data,preprocessor):
         predictions = model.predict(X_testing_clean)
         accuracy = accuracy_score(Y_testing,predictions)
         baseline_results[name] = accuracy
-        print(f"Modelo {name}: Accuracy {accuracy*100:.2f}%")
+        print(f"Model {name}: Accuracy {accuracy*100:.2f}%")
 
 ## Accuracy results by models
-# Modelo KNN: Accuracy 86.14%
-# Modelo RandomForest: Accuracy 87.23%
-# Modelo Logistic Regression: Accuracy 85.60%
-# Modelo Gradient Boosting: Accuracy 86.41%
-# Modelo Decision tree: Accuracy 73.91%
+# Model KNN: Accuracy 86.14%
+# Model RandomForest: Accuracy 87.23%
+# Model Logistic Regression: Accuracy 85.60%
+# Model Gradient Boosting: Accuracy 86.41%
+# Model Decision tree: Accuracy 73.91%
+
+
+# With the results from each model baseline we can choose the best ones to tune and gridsearch
+# Lets create the pipeline and gridsearch for randomforest (again, but with more tuning) and gradient boosting
+
+# I am going to reuse the grid format of random forest we already built, but change the parameters
+
+def gridtuning_random_forest_enhanced(data,preprocessor):
+    X = data.drop(columns="HeartDisease")
+    Y = data["HeartDisease"]
+    X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size=0.4, random_state=42)
+    
+    # Now the processor is ready we will apply it in our data, building the pipeline
+    # The model will be defined as random forest
+    model = RandomForestClassifier(random_state=42)
+    
+    # What happens is that we decide how the data in the pipeline will be processed and wich model is going
+    # to predict our data. The gridsearch will be used to tune how the random forest model will work
+    final_pipeline = Pipeline(steps=[('preprocessing', preprocessor), ('classifier', model)])
+    
+    # Define the parameters for the gridsearch
+    param_grid = {
+        # Indicates the number of trees
+        'classifier__n_estimators' : [100,150,200,300,400,500],
+        
+        # Indicates the size of each tree
+        'classifier__max_depth' :[10,30,None],
+        
+        'classifier__min_samples_leaf': [1,2,4,8]
+    }
+    
+    # Define how the tunning will work
+    grid_model_tuning = GridSearchCV(final_pipeline,param_grid,cv=5,n_jobs=-1)
+    
+    # We give the model the raw data because the pipeline will clean it
+    grid_model_tuning.fit(X_training,Y_training)
+    
+    # After the gridsearch test we will have the best parameters
+    best_model = grid_model_tuning.best_estimator_
+    
+    # Now we can test our best model and check if its accurate
+    prediction = best_model.predict(X_testing)
+    accuracy = accuracy_score(Y_testing,prediction)
+    conf_matrix = confusion_matrix(Y_testing,prediction)
+    report = classification_report(Y_testing,prediction)
+    print(f"Accuracy {accuracy*100:.2f}%")
+    print(report)
+    print("Confusion Matrix:\n",conf_matrix)
+
+## Results for the enhanced forest model
+# Accuracy 88.04%
+#               precision    recall  f1-score   support
+
+#            0       0.82      0.90      0.86       147
+#            1       0.93      0.87      0.90       221
+
+#     accuracy                           0.88       368
+#     macro avg       0.87      0.88      0.88       368
+#     weighted avg       0.88      0.88      0.88       368
+
+# [[132  15]
+#  [ 29 192]]
+
+
+## Let´s create a grid and pipeline for the gradient booster
+
+def grid_gradient_booster_model(data, preprocessor):
+    X = data.drop(columns="HeartDisease")
+    Y = data["HeartDisease"]
+    X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size=0.4, random_state=42)
+    
+    model = GradientBoostingClassifier(random_state=42)
+    final_pipeline = Pipeline(steps=[('preprocessing',preprocessor), ('classifier', model)])
+    
+    param_defs = {
+        'classifier__n_estimators' : [100,150,200,300],
+        'classifier__learning_rate' : [0.05,0.1],
+        'classifier__max_depth': [3,5,7,9] ## tree depth
+    }
+    
+    grid_tuning = GridSearchCV(final_pipeline,param_defs,cv=5,n_jobs=-1)
+    
+    grid_tuning.fit(X_training,Y_training)
+    
+    best_model = grid_tuning.best_estimator_
+    prediction = best_model.predict(X_testing)
+    accuracy = accuracy_score(Y_testing,prediction)
+    conf_matrix = confusion_matrix(Y_testing,prediction)
+    report = classification_report(Y_testing,prediction)
+    print(f"Accuracy {accuracy*100:.2f}%")
+    print(report)
+    print("Confusion Matrix:\n",conf_matrix)
+grid_gradient_booster_model(data,preprocessor)
+
+##Results of gradient booster after tunning
+# Accuracy 86.41%
+#               precision    recall  f1-score   support
+
+#            0       0.79      0.90      0.84       147
+#            1       0.93      0.84      0.88       221
+
+#     accuracy                           0.86       368
+#     macro avg       0.86      0.87      0.86       368
+#     weighted avg       0.87      0.86      0.87       368
+
+# [[133  14]
+#  [ 36 185]]
