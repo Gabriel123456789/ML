@@ -96,7 +96,7 @@ preprocessor = ColumnTransformer(
 )
 
     ## I wanted to go straight to model tuning with gridsearch but lets make a baseline model first
-def base_model_training(data,preprocessor):
+def base_model_training_random_forest(data,preprocessor):
     X = data.drop(columns="HeartDisease")
     Y = data["HeartDisease"]
     X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size=0.4, random_state=42)
@@ -111,8 +111,10 @@ def base_model_training(data,preprocessor):
     predictions = baseline_model.predict(X_testing_clean)
     accuracy = accuracy_score(Y_testing,predictions)
     report = classification_report(Y_testing,predictions)
+    conf_matrix = confusion_matrix(Y_testing, predictions)
     print(f"Accuracy {accuracy*100:.2f}%")
     print(report)
+    print(conf_matrix)
 
 
 ###Baseline Results
@@ -126,7 +128,7 @@ def base_model_training(data,preprocessor):
 #     macro avg       0.87      0.88      0.87       368
 #     weighted avg       0.88      0.87      0.87       368
 
-def gridtuning_model(data,preprocessor):
+def gridtuning_model_random_forest(data,preprocessor):
     X = data.drop(columns="HeartDisease")
     Y = data["HeartDisease"]
     X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size=0.4, random_state=42)
@@ -185,5 +187,45 @@ def gridtuning_model(data,preprocessor):
 #     macro avg       0.86      0.87      0.87       368
 #     weighted avg       0.88      0.87      0.87       368
 
-# [[132  15]
-#  [ 33 188]]
+
+## Start creating, testing and tuning different models
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+
+def various_models_baseline(data,preprocessor):
+    ## Create a dictionary with our models names and modules
+    models = {
+        'KNN': KNeighborsClassifier(),
+        'RandomForest': RandomForestClassifier(random_state=42),
+        'Logistic Regression': LogisticRegression(random_state=42),
+        'Gradient Boosting': GradientBoostingClassifier(random_state=42),
+        'Decision tree': DecisionTreeClassifier(random_state=42)
+    }
+    
+    # Let´s split our data
+    X = data.drop(columns="HeartDisease")
+    Y = data["HeartDisease"]
+    X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size=0.4, random_state=42)
+    
+    # Create a dictionary to save our baseline models results
+    baseline_results = {}
+    
+    X_training_clean = preprocessor.fit_transform(X_training)
+    X_testing_clean = preprocessor.transform(X_testing)
+    
+    for name, model in models.items():
+        model.fit(X_training_clean,Y_training)
+        predictions = model.predict(X_testing_clean)
+        accuracy = accuracy_score(Y_testing,predictions)
+        baseline_results[name] = accuracy
+        print(f"Modelo {name}: Accuracy {accuracy*100:.2f}%")
+
+## Accuracy results by models
+# Modelo KNN: Accuracy 86.14%
+# Modelo RandomForest: Accuracy 87.23%
+# Modelo Logistic Regression: Accuracy 85.60%
+# Modelo Gradient Boosting: Accuracy 86.41%
+# Modelo Decision tree: Accuracy 73.91%
