@@ -3,11 +3,14 @@
 import pandas as pd
 import numpy as np
 
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
+from sklearn.ensemble import RandomForestClassifier
+# Won´t need because there is no filling to do
+#from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
 
 import matplotlib.pyplot as plt
 import seaborn as sbs
@@ -76,3 +79,37 @@ def heat_numericals(dataframe,ncolumns):
     heatmap = sbs.heatmap(dataframe[ncolumns].corr(), annot=True)
     plt.tight_layout()
     plt.show()
+
+
+## Second part - Pipeline and model training
+
+# Start building the pipeline
+
+# It is necessary to discretize some columns values, so we will build the preprocessor
+
+# The columntransformer works with - instruction name - used tool - columns to apply
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', MinMaxScaler(),numerical_cols),
+        ( 'words', OneHotEncoder(handle_unknown='ignore'),words_cols)
+    ]
+)
+
+    ## I wanted to go straight to model tuning with gridsearch but lets make a baseline model first
+def base_model_training(data,preprocessor):
+    X = data.drop(columns="HeartDisease")
+    Y = data["HeartDisease"]
+    X_training,X_testing,Y_training,Y_testing = train_test_split(X,Y, test_size=0.4, random_state=42)
+    
+    # Now the processor is ready we will apply it in our data and train it
+    X_training_clean = preprocessor.fit_transform(X_training)
+    X_testing_clean = preprocessor.transform(X_testing)
+
+    # Here we create our base model, train and test it
+    baseline_model = RandomForestClassifier(random_state=42)
+    baseline_model.fit(X_training_clean,Y_training)
+    predictions = baseline_model.predict(X_testing_clean)
+    accuracy = accuracy_score(Y_testing,predictions)
+    report = classification_report(Y_testing,predictions)
+    print(f"Accuracy {accuracy*100:.2f}%")
+    print(report)
