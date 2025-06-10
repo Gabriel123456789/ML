@@ -3,7 +3,7 @@
 import pandas as pd
 import numpy as np
 
-from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 # Won´t need because there is no filling to do
 #from sklearn.impute import SimpleImputer, KNNImputer
@@ -160,13 +160,7 @@ def gridtuning_model_random_forest(data,preprocessor):
     best_model = grid_model_tuning.best_estimator_
     
     # Now we can test our best model and check if its accurate
-    prediction = best_model.predict(X_testing)
-    accuracy = accuracy_score(Y_testing,prediction)
-    conf_matrix = confusion_matrix(Y_testing,prediction)
-    report = classification_report(Y_testing,prediction)
-    print(f"Accuracy {accuracy*100:.2f}%")
-    print(report)
-    print("Confusion Matrix:\n",conf_matrix)
+    results_show(best_model,X_testing,Y_testing)
 
 ## Grid search tunning results with random forest and
 
@@ -193,6 +187,16 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier
+
+def results_show(best_model,x_testing,y_testing):
+    prediction = best_model.predict(x_testing)
+    accuracy = accuracy_score(y_testing,prediction)
+    conf_matrix = confusion_matrix(y_testing,prediction)
+    report = classification_report(y_testing,prediction)
+    print(f"Accuracy {accuracy*100:.2f}%")
+    print(report)
+    print("Confusion Matrix:\n",conf_matrix)
+    return prediction
 
 
 def various_models_baseline(data,preprocessor):
@@ -270,13 +274,8 @@ def gridtuning_random_forest_enhanced(data,preprocessor):
     best_model = grid_model_tuning.best_estimator_
     
     # Now we can test our best model and check if its accurate
-    prediction = best_model.predict(X_testing)
-    accuracy = accuracy_score(Y_testing,prediction)
-    conf_matrix = confusion_matrix(Y_testing,prediction)
-    report = classification_report(Y_testing,prediction)
-    print(f"Accuracy {accuracy*100:.2f}%")
-    print(report)
-    print("Confusion Matrix:\n",conf_matrix)
+    prediction = results_show(best_model,X_testing,Y_testing)
+    return prediction, X_testing, Y_testing
 
 ## Results for the enhanced forest model
 # Accuracy 88.04%
@@ -314,13 +313,7 @@ def grid_gradient_booster_model(data, preprocessor):
     grid_tuning.fit(X_training,Y_training)
     
     best_model = grid_tuning.best_estimator_
-    prediction = best_model.predict(X_testing)
-    accuracy = accuracy_score(Y_testing,prediction)
-    conf_matrix = confusion_matrix(Y_testing,prediction)
-    report = classification_report(Y_testing,prediction)
-    print(f"Accuracy {accuracy*100:.2f}%")
-    print(report)
-    print("Confusion Matrix:\n",conf_matrix)
+    results_show(best_model,X_testing,Y_testing)
 
 ##Results of gradient booster after tunning
 # Accuracy 86.41%
@@ -365,4 +358,60 @@ def feature_eng_MaxHR(dataframe,ncols):
 # Confusion Matrix:
 #  [[131  16]
 #  [ 32 189]]
+
+## I am going to analyse the confusion matrix and try to see patterns with these patientes
+
+def false_neg_debug(dataframe,preprocessor, ncols):
+    # Will make a change in the og function so we can have the model results here
+    predictions, x_testing, y_testing = gridtuning_random_forest_enhanced(dataframe,preprocessor)
+    
+    # We have to create a new dataframe only with the false negatives patientes - sick people the model said were fine
+    false_negative_mask = (predictions == 0) & (y_testing == 1)
+    false_neg_dataframe = x_testing.loc[false_negative_mask]
+    
+    # We have to compare the false with the true so we can find divergencies
+    true_positives_mask = (predictions == 1) & (y_testing == 1)
+    true_positives_dataframe = x_testing.loc[true_positives_mask]
+    
+    # The .describe module gives statistics on the columns
+    print("False negative statistics: ")
+    print(false_neg_dataframe[ncols].describe())
+    print("True positive statistics: ")
+    print(true_positives_dataframe[ncols].describe())
+
+
+## Results of the data comparison
+# False negative statistics: 
+#              Age   RestingBP  Cholesterol       MaxHR    Oldpeak
+# count  29.000000   29.000000    29.000000   29.000000  29.000000
+# mean   53.275862  129.275862   191.724138  148.758621   0.334483
+# std     8.770472   21.011726   113.919425   25.299146   0.628647
+# min    40.000000   95.000000     0.000000   97.000000  -0.700000
+# 25%    47.000000  112.000000   172.000000  125.000000   0.000000
+# 50%    54.000000  130.000000   236.000000  152.000000   0.000000
+# 75%    58.000000  140.000000   265.000000  170.000000   0.600000
+# max    73.000000  192.000000   319.000000  195.000000   2.500000
+# True positive statistics: 
+#               Age   RestingBP  Cholesterol       MaxHR     Oldpeak
+# count  192.000000  192.000000   192.000000  192.000000  192.000000
+# mean    55.807292  133.229167   172.364583  123.802083    1.303125
+# std      8.359047   19.658061   130.411441   22.180185    1.089642
+# min     31.000000   92.000000     0.000000   60.000000   -1.000000
+# 25%     51.000000  120.000000     0.000000  109.750000    0.475000
+# 50%     56.000000  131.000000   214.000000  122.500000    1.200000
+# 75%     62.000000  145.000000   266.000000  140.000000    2.000000
+# max     77.000000  200.000000   529.000000  182.000000    6.200000
+
+
+## Analyzing this data we can see a problem that I did not see before; There are patients with cholesterol = 0
+# This can disrupt our model training and now we have to see how to take care of it
+
+# total_rows = len(data)
+# cholesterol_zero_count = (data['Cholesterol'] == 0).sum()
+# percentge = (cholesterol_zero_count/total_rows) * 100
+
+## Result: The percentage of zero cholesterol patients is: 18.74%
+
+# This shows that the data is enough that it´s dismissal will bring problems to the model training
+# So now the data will have to be treated and the data will be imputate
 
