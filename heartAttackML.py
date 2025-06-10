@@ -321,7 +321,6 @@ def grid_gradient_booster_model(data, preprocessor):
     print(f"Accuracy {accuracy*100:.2f}%")
     print(report)
     print("Confusion Matrix:\n",conf_matrix)
-grid_gradient_booster_model(data,preprocessor)
 
 ##Results of gradient booster after tunning
 # Accuracy 86.41%
@@ -336,3 +335,34 @@ grid_gradient_booster_model(data,preprocessor)
 
 # [[133  14]
 #  [ 36 185]]
+
+
+## After analyzing it is clear that the tuned random forest was the best model yet, I am going to try some
+# feature engineering so we can get better results
+
+#heat_numericals(data,numerical_cols)
+
+def feature_eng_MaxHR(dataframe,ncols):
+    #how i tought of doing it
+    #dataframe['MaxHR_Age_Formula'] = dataframe.apply(lambda row: 1 if (220-row['Age']>row['MaxHR']) else 0, axis=1)
+    
+    #correct way - the astype turns all the true values to 1 and falses to 0
+    dataframe['MaxHR_Age_Formula'] = ((220-dataframe['Age'])>dataframe['MaxHR']).astype(int)
+    ncols.append('MaxHR_Age_Formula')
+    return dataframe,ncols
+
+# Results with the maxHR feature - The new feature wasn´t good for the model predicition
+# Accuracy 86.96%
+#               precision    recall  f1-score   support
+
+#            0       0.80      0.89      0.85       147
+#            1       0.92      0.86      0.89       221
+
+#     accuracy                           0.87       368
+#     macro avg       0.86      0.87      0.87       368
+#     weighted avg       0.87      0.87      0.87       368
+
+# Confusion Matrix:
+#  [[131  16]
+#  [ 32 189]]
+
