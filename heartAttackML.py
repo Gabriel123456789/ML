@@ -3,10 +3,9 @@
 import pandas as pd
 import numpy as np
 
-from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
-# Won´t need because there is no filling to do
-#from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.pipeline import Pipeline
@@ -84,16 +83,19 @@ def heat_numericals(dataframe,ncolumns):
 ## Second part - Pipeline and model training
 
 # Start building the pipeline
-
 # It is necessary to discretize some columns values, so we will build the preprocessor
 
 # The columntransformer works with - instruction name - used tool - columns to apply
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', MinMaxScaler(),numerical_cols),
-        ( 'words', OneHotEncoder(handle_unknown='ignore'),words_cols)
-    ]
-)
+
+### OLD PREPROCESSOR - check line 422
+
+# preprocessor = ColumnTransformer(
+#     transformers=[
+#         ('num', MinMaxScaler(),numerical_cols),
+#         ( 'words', OneHotEncoder(handle_unknown='ignore'),words_cols)
+#     ]
+# )
+
 
     ## I wanted to go straight to model tuning with gridsearch but lets make a baseline model first
 def base_model_training_random_forest(data,preprocessor):
@@ -160,6 +162,7 @@ def gridtuning_model_random_forest(data,preprocessor):
     best_model = grid_model_tuning.best_estimator_
     
     # Now we can test our best model and check if its accurate
+    print("Results for grid simpler random forest")
     results_show(best_model,X_testing,Y_testing)
 
 ## Grid search tunning results with random forest and
@@ -274,6 +277,7 @@ def gridtuning_random_forest_enhanced(data,preprocessor):
     best_model = grid_model_tuning.best_estimator_
     
     # Now we can test our best model and check if its accurate
+    print("Results for Grid Tuning enhanced random forest")
     prediction = results_show(best_model,X_testing,Y_testing)
     return prediction, X_testing, Y_testing
 
@@ -313,6 +317,7 @@ def grid_gradient_booster_model(data, preprocessor):
     grid_tuning.fit(X_training,Y_training)
     
     best_model = grid_tuning.best_estimator_
+    print("Results for grid gradient booster")
     results_show(best_model,X_testing,Y_testing)
 
 ##Results of gradient booster after tunning
@@ -415,3 +420,81 @@ def false_neg_debug(dataframe,preprocessor, ncols):
 # This shows that the data is enough that it´s dismissal will bring problems to the model training
 # So now the data will have to be treated and the data will be imputate
 
+data['Cholesterol'] = data['Cholesterol'].replace(0,np.nan)
+
+## The preprocessor will have to be changed so it can impute ONLY at numerical columns
+
+### NEM PREPROCESSOR - The difference is that now we will treat the cholesterol rows that were 0 into NaN
+# and them imputate them, so:
+
+numerical_treatment = Pipeline(steps=[('imputer',KNNImputer(n_neighbors=5)), ('scaler', MinMaxScaler())])
+preprocessor = ColumnTransformer(transformers=[('num',numerical_treatment, numerical_cols),
+        ('words', OneHotEncoder(handle_unknown='ignore'),words_cols)])
+
+# Now I am going to test all our data again
+
+## Results after imputation:
+# Model KNN: Accuracy 85.05%
+# Model RandomForest: Accuracy 85.60%
+# Model Logistic Regression: Accuracy 84.78%
+# Model Gradient Boosting: Accuracy 84.24%
+# Model Decision tree: Accuracy 73.37%
+
+# Accuracy 85.60%
+#               precision    recall  f1-score   support
+
+#            0       0.78      0.89      0.83       147
+#            1       0.92      0.83      0.87       221
+
+#     accuracy                           0.86       368
+#     macro avg       0.85      0.86      0.85       368
+#     weighted avg       0.86      0.86      0.86       368
+
+# Confusion Matrix:
+#  [[131  16]
+#  [ 37 184]]
+ 
+# Results for grid gradient booster
+# Accuracy 84.51%
+#               precision    recall  f1-score   support
+
+#            0       0.76      0.90      0.82       147
+#            1       0.92      0.81      0.86       221
+
+#     accuracy                           0.85       368
+#    macro avg       0.84      0.85      0.84       368
+# weighted avg       0.86      0.85      0.85       368
+
+# Confusion Matrix:
+#  [[132  15]
+#  [ 42 179]]
+ 
+# Results for Grid Tuning enhanced random forest
+# Accuracy 85.60%
+#               precision    recall  f1-score   support
+
+#            0       0.78      0.89      0.83       147
+#            1       0.92      0.83      0.87       221
+
+#     accuracy                           0.86       368
+#     macro avg       0.85      0.86      0.85       368
+#     weighted avg       0.86      0.86      0.86       368
+
+# Confusion Matrix:
+#  [[131  16]
+#  [ 37 184]]
+ 
+# Results for grid simpler random forest
+# Accuracy 85.60%
+#               precision    recall  f1-score   support
+
+#            0       0.78      0.89      0.83       147
+#            1       0.92      0.83      0.87       221
+
+#     accuracy                           0.86       368
+#     macro avg       0.85      0.86      0.85       368
+#     weighted avg       0.86      0.86      0.86       368
+
+# Confusion Matrix:
+#  [[131  16]
+#  [ 37 184]]
